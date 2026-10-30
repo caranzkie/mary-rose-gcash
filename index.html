@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0878e8">
+<meta name="description" content="Mary Rose GCash In/Out transaction calculator and record manager.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Mary Rose GCash In/Out</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f1f5fb;color:#172554;padding:16px}
+.container{max-width:900px;margin:auto}
+.header{background:#0878e8;color:white;padding:24px;border-radius:18px;margin-bottom:18px}
+.header h1{font-size:25px;margin-bottom:8px}.header p{font-size:14px;opacity:.92}
+.notice{background:#fff8df;color:#795500;padding:12px;border-radius:10px;font-size:12px;line-height:1.5;margin-bottom:18px}
+.card{background:white;padding:20px;border-radius:16px;margin-bottom:18px;box-shadow:0 3px 12px #102a5610}
+.card h2{font-size:19px;margin-bottom:16px}
+.tabs{display:flex;gap:10px;margin-bottom:20px}
+.tabs button{flex:1;padding:13px 8px;border:2px solid #dbeafe;border-radius:10px;background:white;color:#0758b8;font-weight:bold}
+.tabs button.active{background:#0878e8;border-color:#0878e8;color:white}
+label{display:block;font-size:13px;font-weight:bold;margin:14px 0 7px}
+input{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:9px;font-size:16px;background:white}
+.summary{background:#eff6ff;border-radius:12px;padding:15px;margin-top:18px}
+.summary-row{display:flex;justify-content:space-between;gap:12px;margin:12px 0;font-size:14px}
+.summary-row strong{text-align:right}.total{border-top:1px solid #cbd5e1;padding-top:14px;font-size:17px;color:#0065d1;font-weight:bold}
+.main-btn,.secondary-btn{width:100%;padding:14px;border:0;border-radius:10px;margin-top:14px;font-size:15px;font-weight:bold;cursor:pointer}
+.main-btn{background:#0878e8;color:white}.secondary-btn{background:#e8f1ff;color:#0758b8}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.stat{background:white;padding:15px 10px;border-radius:12px;box-shadow:0 3px 12px #102a5608;min-width:0}
+.stat p{color:#64748b;font-size:11px;margin-bottom:8px}.stat h3{font-size:17px;overflow-wrap:anywhere}
+.history-search{margin-bottom:12px}.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:650px}
+th,td{padding:12px 8px;border-bottom:1px solid #e2e8f0;text-align:left}
+th{background:#f8fafc;color:#475569}
+.badge{display:inline-block;padding:5px 8px;border-radius:20px;font-size:11px;font-weight:bold}
+.in{background:#dcfce7;color:#166534}.out{background:#fee2e2;color:#991b1b}
+.empty{text-align:center;color:#64748b;padding:25px}
+.delete-btn{background:#fee2e2;color:#991b1b;border:0;border-radius:6px;padding:7px;cursor:pointer}
+.footer{text-align:center;color:#64748b;font-size:12px;padding:12px}
+@media(max-width:480px){body{padding:10px}.header{padding:20px}.header h1{font-size:22px}.card{padding:15px}.stat h3{font-size:14px}.stat{padding:12px 8px}}
+@media print{.header,.notice,.tabs,form,.stats,.history-search,.delete-btn,.secondary-btn,.footer{display:none!important}body{background:white}.card{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="container">
+<header class="header">
+<h1>Mary Rose GCash In/Out</h1>
+<p>Cash-In and Cash-Out Management</p>
+<p id="today" style="margin-top:10px"></p>
+</header>
+<div class="notice"><strong>Important:</strong> This is an independent transaction-recording tool, not the official GCash app. It does not transfer money or verify payments. Confirm every payment in the official GCash app. Sample fees are editable.</div>
+<div class="stats">
+<div class="stat"><p>Total Transactions</p><h3 id="count">0</h3></div>
+<div class="stat"><p>Total Cash-In</p><h3 id="totalIn">₱0.00</h3></div>
+<div class="stat"><p>Total Cash-Out</p><h3 id="totalOut">₱0.00</h3></div>
+</div>
+<section class="card">
+<h2>New Transaction</h2>
+<div class="tabs">
+<button type="button" id="inTab" class="active">Cash-In</button>
+<button type="button" id="outTab">Cash-Out</button>
+</div>
+<form id="transactionForm">
+<label for="customer">Customer Name</label><input id="customer" type="text" placeholder="Enter customer name" maxlength="80" required>
+<label for="mobile">GCash Mobile Number</label><input id="mobile" type="tel" placeholder="09XXXXXXXXX" pattern="09[0-9]{9}" maxlength="11" inputmode="numeric" required>
+<label for="amount">Transaction Amount (₱)</label><input id="amount" type="number" min="1" max="1000000" step="0.01" placeholder="Enter amount" required>
+<label for="rate">Service Fee Rate (%)</label><input id="rate" type="number" min="0" max="100" step="0.01" value="1" required>
+<div class="summary">
+<div class="summary-row"><span>Transaction Type</span><strong id="typeLabel">Cash-In</strong></div>
+<div class="summary-row"><span>Transaction Amount</span><strong id="amountDisplay">₱0.00</strong></div>
+<div class="summary-row"><span>Service Fee</span><strong id="feeDisplay">₱0.00</strong></div>
+<div class="summary-row total"><span id="totalLabel">Customer Pays</span><strong id="totalDisplay">₱0.00</strong></div>
+<div class="summary-row"><span id="resultLabel">Amount Credited</span><strong id="resultDisplay">₱0.00</strong></div>
+</div>
+<button type="submit" class="main-btn">Save Transaction</button>
+</form>
+</section>
+<section class="card">
+<h2>Transaction History</h2>
+<input class="history-search" id="search" type="search" placeholder="Search customer, mobile, or transaction ID...">
+<div class="table-wrap"><table>
+<thead><tr><th>Transaction ID</th><th>Customer</th><th>Mobile</th><th>Type</th><th>Amount</th><th>Fee</th><th>Total</th><th>Date</th><th>Action</th></tr></thead>
+<tbody id="history"></tbody>
+</table></div>
+<button class="secondary-btn" id="printBtn" type="button">Print Transaction Report</button>
+</section>
+<div class="footer">Mary Rose GCash In/Out • Independent record-keeping app</div>
+</div>
+<script>
+"use strict";
+let transactionType="Cash-In";
+const $=id=>document.getElementById(id);
+const money=value=>"₱"+Number(value).toLocaleString("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2});
+const amountInput=$("amount"),rateInput=$("rate");
+$("today").textContent=new Date().toLocaleString("en-PH",{dateStyle:"medium",timeStyle:"short"});
+function getTransactions(){try{const data=JSON.parse(localStorage.getItem("maryRoseGcashTransactions")||"[]");return Array.isArray(data)?data:[]}catch{return[]}}
+function saveTransactions(items){try{localStorage.setItem("maryRoseGcashTransactions",JSON.stringify(items));return true}catch{alert("Unable to save records. Your browser storage may be full or unavailable.");return false}}
+function setType(type){
+ transactionType=type;
+ $("inTab").classList.toggle("active",type==="Cash-In");
+ $("outTab").classList.toggle("active",type==="Cash-Out");
+ $("typeLabel").textContent=type;
+ rateInput.value=type==="Cash-In"?"1":"2";
+ $("totalLabel").textContent=type==="Cash-In"?"Customer Pays":"Total Wallet Deduction";
+ $("resultLabel").textContent=type==="Cash-In"?"Amount Credited":"Cash Received by Customer";
+ updateSummary();
+}
+function calculate(){
+ const amount=Number(amountInput.value)||0,rate=Number(rateInput.value)||0;
+ const fee=Math.round((amount*rate/100)*100)/100,total=amount+fee;
+ return{amount,rate,fee,total};
+}
+function updateSummary(){
+ const{amount,fee,total}=calculate();
+ $("amountDisplay").textContent=money(amount);$("feeDisplay").textContent=money(fee);
+ $("totalDisplay").textContent=money(total);$("resultDisplay").textContent=money(amount);
+}
+amountInput.addEventListener("input",updateSummary);rateInput.addEventListener("input",updateSummary);
+$("inTab").addEventListener("click",()=>setType("Cash-In"));
+$("outTab").addEventListener("click",()=>setType("Cash-Out"));
+$("transactionForm").addEventListener("submit",function(event){
+ event.preventDefault();
+ const customer=$("customer").value.trim(),mobile=$("mobile").value.trim();
+ const{amount,rate,fee,total}=calculate();
+ if(!customer||!/^09\d{9}$/.test(mobile)){alert("Enter a customer name and valid 11-digit Philippine mobile number.");return}
+ if(!Number.isFinite(amount)||amount<=0||amount>1000000||!Number.isFinite(rate)||rate<0||rate>100){alert("Enter a valid amount and fee rate.");return}
+ const transaction={id:"MRG-"+Date.now(),customer,mobile,type:transactionType,amount,rate,fee,total,date:new Date().toLocaleString("en-PH")};
+ const transactions=getTransactions();transactions.unshift(transaction);
+ if(!saveTransactions(transactions))return;
+ renderHistory();alert("Transaction record saved!\n\nID: "+transaction.id+"\nType: "+transaction.type+"\nAmount: "+money(amount)+"\nService Fee: "+money(fee)+"\nTotal: "+money(total));
+ this.reset();setType("Cash-In");
+});
+function renderHistory(){
+ const transactions=getTransactions(),query=$("search").value.toLowerCase();
+ const filtered=transactions.filter(t=>String(t.customer||"").toLowerCase().includes(query)||String(t.id||"").toLowerCase().includes(query)||String(t.mobile||"").includes(query));
+ $("count").textContent=transactions.length;
+ $("totalIn").textContent=money(transactions.filter(t=>t.type==="Cash-In").reduce((s,t)=>s+Number(t.amount||0),0));
+ $("totalOut").textContent=money(transactions.filter(t=>t.type==="Cash-Out").reduce((s,t)=>s+Number(t.amount||0),0));
+ const tbody=$("history");tbody.replaceChildren();
+ if(!filtered.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=9;td.className="empty";td.textContent="No transactions found.";tr.appendChild(td);tbody.appendChild(tr);return}
+ filtered.forEach(t=>{
+  const tr=document.createElement("tr");
+  [t.id,t.customer,t.mobile,t.type,money(t.amount),money(t.fee),money(t.total),t.date].forEach((value,index)=>{
+   const td=document.createElement("td");
+   if(index===3){const badge=document.createElement("span");badge.className="badge "+(t.type==="Cash-In"?"in":"out");badge.textContent=value;td.appendChild(badge)}
+   else td.textContent=String(value??"");
+   tr.appendChild(td);
+  });
+  const action=document.createElement("td"),button=document.createElement("button");button.className="delete-btn";button.textContent="Delete";
+  button.addEventListener("click",()=>{if(!confirm("Delete this transaction record?"))return;saveTransactions(getTransactions().filter(item=>item.id!==t.id));renderHistory()});
+  action.appendChild(button);tr.appendChild(action);tbody.appendChild(tr);
+ });
+}
+$("search").addEventListener("input",renderHistory);$("printBtn").addEventListener("click",()=>window.print());
+setType("Cash-In");renderHistory();
+if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost")){
+ window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(err=>console.log("Service worker registration failed:",err)));
+}
+</script>
+</body>
+</html>
