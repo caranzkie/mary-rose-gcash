@@ -24,6 +24,10 @@ jobs:
           unzip -o CashFlowTracker_Android_Project.zip -d .
           test -f cashflow_tracker_android/app/build.gradle.kts
 
+      - name: Align Java target with Kotlin
+        run: |
+          sed -i 's/JavaVersion.VERSION_1_8/JavaVersion.VERSION_17/g' cashflow_tracker_android/app/build.gradle.kts
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
